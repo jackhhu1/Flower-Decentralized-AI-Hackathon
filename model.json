@@ -1,0 +1,95 @@
+{
+  "format": "layers-model",
+  "generatedBy": "1.15.0",
+  "convertedBy": "TensorFlow.js Converter v3.20.0",
+  "modelTopology": {
+    "node": [
+      {
+        "name": "input",
+        "op": "Placeholder",
+        "attr": {
+          "dtype": {
+            "type": "DT_FLOAT"
+          },
+          "shape": {
+            "shape": {
+              "dim": [
+                {
+                  "size": "1"
+                },
+                {
+                  "size": "3"
+                },
+                {
+                  "size": "28"
+                },
+                {
+                  "size": "28"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "conv1",
+        "op": "Conv2D",
+        "input": [
+          "input",
+          "conv1/kernel"
+        ],
+        "attr": {
+          "strides": {
+            "list": {
+              "i": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          "padding": {
+            "s": "SAME"
+          },
+          "data_format": {
+            "s": "NHWC"
+          }
+        }
+      },
+      {
+        "name": "output",
+        "op": "Softmax",
+        "input": [
+          "conv1"
+        ]
+      }
+    ]
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "model.weights.bin"
+      ],
+      "weights": [
+        {
+          "name": "conv1/kernel",
+          "shape": [
+            3,
+            3,
+            3,
+            32
+          ],
+          "dtype": "float32"
+        },
+        {
+          "name": "conv1/bias",
+          "shape": [
+            32
+          ],
+          "dtype": "float32"
+        }
+      ]
+    }
+  ]
+}

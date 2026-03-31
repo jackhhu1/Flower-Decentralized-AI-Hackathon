@@ -3,6 +3,8 @@
 import os
 import numpy as np
 from collections import defaultdict
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import torch
 import torch.nn as nn
@@ -16,6 +18,9 @@ from torchvision.transforms import (
     RandomVerticalFlip, ColorJitter, RandomAffine, RandomResizedCrop,
     RandomErasing, RandomPerspective
 )
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
 
 
 class AttentionBlock(nn.Module):
@@ -48,125 +53,73 @@ class AttentionBlock(nn.Module):
 
 
 class EnhancedCNN(nn.Module):
-    """Optimized CNN with advanced attention mechanisms for maximum diagnostic accuracy"""
+    """Enhanced CNN with attention mechanisms optimized for skin lesion classification"""
 
     def __init__(self, num_classes: int):
         super(EnhancedCNN, self).__init__()
         
-        # Enhanced feature extraction with residual connections
-        # First block - capture low-level features (edges, textures)
-        self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.attention1 = AttentionBlock(64, reduction=8)
-        self.conv1_res = nn.Conv2d(3, 64, 1)  # Residual connection
+        # First convolutional block with attention
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.attention1 = AttentionBlock(32)
         self.pool1 = nn.MaxPool2d(2, 2)
         
-        # Second block - capture mid-level features (patterns, shapes)
-        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(128)
-        self.attention2 = AttentionBlock(128, reduction=8)
-        self.conv2_res = nn.Conv2d(64, 128, 1)  # Residual connection
+        # Second convolutional block with attention
+        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.attention2 = AttentionBlock(64)
         self.pool2 = nn.MaxPool2d(2, 2)
         
-        # Third block - capture high-level features (lesion characteristics)
-        self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
-        self.bn3 = nn.BatchNorm2d(256)
-        self.attention3 = AttentionBlock(256, reduction=8)
-        self.conv3_res = nn.Conv2d(128, 256, 1)  # Residual connection
+        # Third convolutional block with attention
+        self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.attention3 = AttentionBlock(128)
         self.pool3 = nn.MaxPool2d(2, 2)
         
-        # Fourth block - capture very high-level features (diagnostic patterns)
-        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
-        self.bn4 = nn.BatchNorm2d(512)
-        self.attention4 = AttentionBlock(512, reduction=8)
-        self.conv4_res = nn.Conv2d(256, 512, 1)  # Residual connection
+        # Fourth convolutional block with attention
+        self.conv4 = nn.Conv2d(128, 256, 3, padding=1)
+        self.bn4 = nn.BatchNorm2d(256)
+        self.attention4 = AttentionBlock(256)
         self.pool4 = nn.MaxPool2d(2, 2)
         
-        # Fifth block - final feature extraction
-        self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
-        self.bn5 = nn.BatchNorm2d(512)
-        self.attention5 = AttentionBlock(512, reduction=8)
-        
-        # Global feature aggregation
+        # Global average pooling
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.global_max_pool = nn.AdaptiveMaxPool2d(1)
         
-        # Enhanced classifier with multiple pathways
-        self.dropout1 = nn.Dropout(0.3)
-        self.dropout2 = nn.Dropout(0.5)
-        self.dropout3 = nn.Dropout(0.3)
-        
-        # Multi-scale feature fusion
-        self.fc1 = nn.Linear(1024, 1024)  # Combined avg + max pooling
-        self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 256)
-        self.fc4 = nn.Linear(256, num_classes)
-        
-        # Initialize weights for better convergence
-        self._initialize_weights()
-
-    def _initialize_weights(self):
-        """Initialize weights using Xavier/He initialization for better convergence"""
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight)
-                nn.init.constant_(m.bias, 0)
+        # Classifier with dropout
+        self.dropout = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(256, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, num_classes)
 
     def forward(self, x):
-        # Store input for residual connection
-        identity1 = self.conv1_res(x)
-        
-        # First block with residual connection
+        # First block
         x = F.relu(self.bn1(self.conv1(x)))
         x = self.attention1(x)
-        x = x + identity1  # Residual connection
         x = self.pool1(x)
         
-        # Second block with residual connection
-        identity2 = self.conv2_res(x)
+        # Second block
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.attention2(x)
-        x = x + identity2  # Residual connection
         x = self.pool2(x)
         
-        # Third block with residual connection
-        identity3 = self.conv3_res(x)
+        # Third block
         x = F.relu(self.bn3(self.conv3(x)))
         x = self.attention3(x)
-        x = x + identity3  # Residual connection
         x = self.pool3(x)
         
-        # Fourth block with residual connection
-        identity4 = self.conv4_res(x)
+        # Fourth block
         x = F.relu(self.bn4(self.conv4(x)))
         x = self.attention4(x)
-        x = x + identity4  # Residual connection
         x = self.pool4(x)
         
-        # Fifth block
-        x = F.relu(self.bn5(self.conv5(x)))
-        x = self.attention5(x)
-        
-        # Multi-scale feature aggregation
-        avg_pool = self.global_avg_pool(x)
-        max_pool = self.global_max_pool(x)
-        
-        # Combine average and max pooling for richer features
-        x = torch.cat([avg_pool, max_pool], dim=1)
+        # Global average pooling
+        x = self.global_avg_pool(x)
         x = x.view(x.size(0), -1)
         
-        # Enhanced classifier with multiple dropout layers
-        x = self.dropout1(F.relu(self.fc1(x)))
-        x = self.dropout2(F.relu(self.fc2(x)))
-        x = self.dropout3(F.relu(self.fc3(x)))
-        x = self.fc4(x)  # Final classification layer
+        # Classifier
+        x = self.dropout(F.relu(self.fc1(x)))
+        x = self.dropout(F.relu(self.fc2(x)))
+        x = self.fc3(x)
         
         return x
 
@@ -238,44 +191,18 @@ class Net(nn.Module):
 
 
 class FocalLoss(nn.Module):
-    """Enhanced Focal Loss optimized for cancer diagnosis with class-specific weighting"""
+    """Focal Loss for addressing class imbalance in skin lesion classification"""
     
-    def __init__(self, alpha=1, gamma=3, reduction='mean', class_weights=None):
+    def __init__(self, alpha=1, gamma=2, reduction='mean'):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
         
-        # Cancer-specific class weights (higher weight for malignant classes)
-        if class_weights is None:
-            # DermMNIST class weights: prioritize malignant classes
-            self.class_weights = torch.tensor([
-                1.0,  # Melanocytic nevi (benign)
-                3.0,  # Melanoma (malignant) - HIGH PRIORITY
-                2.0,  # Benign keratosis (benign)
-                2.5,  # Basal cell carcinoma (malignant) - HIGH PRIORITY
-                2.0,  # Actinic keratoses (pre-malignant) - MEDIUM PRIORITY
-                1.0,  # Vascular lesions (benign)
-                1.0   # Dermatofibroma (benign)
-            ])
-        else:
-            self.class_weights = class_weights
-            
     def forward(self, inputs, targets):
-        # Calculate cross entropy loss
         ce_loss = F.cross_entropy(inputs, targets, reduction='none')
-        
-        # Calculate probabilities
         pt = torch.exp(-ce_loss)
-        
-        # Apply class-specific weights
-        if self.class_weights.device != inputs.device:
-            self.class_weights = self.class_weights.to(inputs.device)
-        
-        class_weight = self.class_weights[targets]
-        
-        # Enhanced focal loss with class weighting
-        focal_loss = class_weight * self.alpha * (1 - pt) ** self.gamma * ce_loss
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * ce_loss
         
         if self.reduction == 'mean':
             return focal_loss.mean()
@@ -285,32 +212,258 @@ class FocalLoss(nn.Module):
             return focal_loss
 
 
-class DiagnosticLoss(nn.Module):
-    """Specialized loss function for cancer diagnosis with confidence weighting"""
+class ImprovedCNN(nn.Module):
+    """Enhanced CNN with batch normalization, no dropout, and more layers"""
     
-    def __init__(self, cancer_classes=[1, 3, 4], confidence_weight=2.0):
-        super(DiagnosticLoss, self).__init__()
-        self.cancer_classes = cancer_classes  # Melanoma, BCC, Actinic keratoses
-        self.confidence_weight = confidence_weight
-        self.focal_loss = FocalLoss(alpha=1, gamma=3)
+    def __init__(self, num_classes=7):
+        super(ImprovedCNN, self).__init__()
         
-    def forward(self, inputs, targets):
-        # Standard focal loss
-        focal_loss = self.focal_loss(inputs, targets)
+        # Feature extraction layers with batch normalization
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.pool1 = nn.MaxPool2d(2, 2)
         
-        # Calculate confidence penalty for cancer classes
-        probabilities = F.softmax(inputs, dim=1)
-        max_probs, predicted = torch.max(probabilities, dim=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.conv4 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm2d(128)
+        self.pool2 = nn.MaxPool2d(2, 2)
         
-        # Penalize low confidence predictions for cancer classes
-        cancer_mask = torch.isin(targets, torch.tensor(self.cancer_classes).to(targets.device))
-        confidence_penalty = torch.where(
-            cancer_mask & (max_probs < 0.8),
-            (0.8 - max_probs) * self.confidence_weight,
-            torch.zeros_like(max_probs)
-        ).mean()
+        self.conv5 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.bn5 = nn.BatchNorm2d(256)
+        self.conv6 = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn6 = nn.BatchNorm2d(256)
+        self.pool3 = nn.MaxPool2d(2, 2)
         
-        return focal_loss + confidence_penalty
+        # Additional layers for better feature learning
+        self.conv7 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
+        self.bn7 = nn.BatchNorm2d(512)
+        self.conv8 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
+        self.bn8 = nn.BatchNorm2d(512)
+        
+        # Global average pooling instead of flattening
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        
+        # Classification head with batch normalization
+        self.fc1 = nn.Linear(512, 256)
+        self.bn_fc1 = nn.BatchNorm1d(256)
+        self.fc2 = nn.Linear(256, 128)
+        self.bn_fc2 = nn.BatchNorm1d(128)
+        self.fc3 = nn.Linear(128, num_classes)
+        
+    def forward(self, x):
+        # First block
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.pool1(x)
+        
+        # Second block
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = self.pool2(x)
+        
+        # Third block
+        x = F.relu(self.bn5(self.conv5(x)))
+        x = F.relu(self.bn6(self.conv6(x)))
+        x = self.pool3(x)
+        
+        # Fourth block
+        x = F.relu(self.bn7(self.conv7(x)))
+        x = F.relu(self.bn8(self.conv8(x)))
+        
+        # Global average pooling
+        x = self.global_avg_pool(x)
+        x = x.view(x.size(0), -1)
+        
+        # Classification head
+        x = F.relu(self.bn_fc1(self.fc1(x)))
+        x = F.relu(self.bn_fc2(self.fc2(x)))
+        x = self.fc3(x)
+        
+        return x
+
+
+class HybridCNNSVM(nn.Module):
+    """Hybrid CNN-SVM model: CNN for feature extraction, SVM for classification"""
+    
+    def __init__(self, num_classes=7):
+        super(HybridCNNSVM, self).__init__()
+        
+        # CNN feature extractor
+        self.feature_extractor = nn.Sequential(
+            # Block 1
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            
+            # Block 2
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            
+            # Block 3
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1)
+        )
+        
+        # Feature dimension for SVM
+        self.feature_dim = 256
+        self.num_classes = num_classes
+        
+        # SVM components (will be trained separately)
+        self.svm_models = {}
+        self.scaler = StandardScaler()
+        self.svm_trained = False
+        
+    def extract_features(self, x):
+        """Extract features using CNN"""
+        features = self.feature_extractor(x)
+        return features.view(features.size(0), -1)
+    
+    def forward(self, x):
+        """Forward pass - use CNN features for now, SVM will be trained separately"""
+        features = self.extract_features(x)
+        
+        # For now, use a simple linear layer instead of SVM
+        # In practice, you'd train SVM separately and use it for inference
+        if not hasattr(self, 'classifier'):
+            self.classifier = nn.Linear(self.feature_dim, self.num_classes).to(x.device)
+        
+        return self.classifier(features)
+    
+    def train_svm(self, train_loader, device):
+        """Train SVM on extracted features"""
+        self.eval()
+        features_list = []
+        labels_list = []
+        
+        with torch.no_grad():
+            for batch in train_loader:
+                if isinstance(batch, (list, tuple)) and len(batch) == 2:
+                    images, labels = batch
+                else:
+                    images = batch["image"]
+                    labels = batch["label"]
+                
+                images = images.to(device)
+                features = self.extract_features(images)
+                features_list.append(features.cpu().numpy())
+                labels_list.append(labels.numpy())
+        
+        # Combine all features and labels
+        X = np.vstack(features_list)
+        y = np.hstack(labels_list)
+        
+        # Scale features
+        X_scaled = self.scaler.fit_transform(X)
+        
+        # Train SVM for each class (one-vs-rest)
+        for class_id in range(self.num_classes):
+            y_binary = (y == class_id).astype(int)
+            if np.sum(y_binary) > 0:  # Only train if class has samples
+                svm = SVC(kernel='rbf', probability=True, class_weight='balanced')
+                svm.fit(X_scaled, y_binary)
+                self.svm_models[class_id] = svm
+        
+        self.svm_trained = True
+        print(f"✅ Trained SVM for {len(self.svm_models)} classes")
+
+
+class DeepCNN(nn.Module):
+    """Very deep CNN with residual connections and batch normalization"""
+    
+    def __init__(self, num_classes=7):
+        super(DeepCNN, self).__init__()
+        
+        # Initial convolution
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        
+        # Residual blocks
+        self.layer1 = self._make_layer(64, 64, 2)
+        self.layer2 = self._make_layer(64, 128, 2, stride=2)
+        self.layer3 = self._make_layer(128, 256, 2, stride=2)
+        self.layer4 = self._make_layer(256, 512, 2, stride=2)
+        
+        # Global average pooling
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        
+        # Classifier
+        self.fc = nn.Linear(512, num_classes)
+        
+    def _make_layer(self, in_channels, out_channels, blocks, stride=1):
+        layers = []
+        
+        # First block with potential downsampling
+        layers.append(ResidualBlock(in_channels, out_channels, stride))
+        
+        # Remaining blocks
+        for _ in range(1, blocks):
+            layers.append(ResidualBlock(out_channels, out_channels))
+            
+        return nn.Sequential(*layers)
+    
+    def forward(self, x):
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.maxpool(x)
+        
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+        
+        return x
+
+
+class ResidualBlock(nn.Module):
+    """Residual block with batch normalization"""
+    
+    def __init__(self, in_channels, out_channels, stride=1):
+        super(ResidualBlock, self).__init__()
+        
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        
+        # Shortcut connection
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride),
+                nn.BatchNorm2d(out_channels)
+            )
+    
+    def forward(self, x):
+        residual = x
+        
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        
+        out += self.shortcut(residual)
+        out = F.relu(out)
+        
+        return out
 
 
 # Enhanced data augmentation for skin lesion images
@@ -345,130 +498,36 @@ def load_data(data_path: str):
     return trainloader, testloader
 
 
-def train(net, trainloader, epochs, lr, device, use_focal_loss=False, use_diagnostic_loss=False):
-    """Enhanced training function optimized for cancer diagnosis accuracy."""
+def train(net, trainloader, epochs, lr, device, use_focal_loss=False):
+    """Train the model on the training set."""
     net.to(device)  # move model to GPU if available
     
-    # Choose optimized loss function for cancer diagnosis
-    if use_diagnostic_loss:
-        criterion = DiagnosticLoss(cancer_classes=[1, 3, 4], confidence_weight=2.0).to(device)
-        print("🔬 Using DiagnosticLoss for cancer-specific training")
-    elif use_focal_loss:
-        criterion = FocalLoss(alpha=1, gamma=3, class_weights=None).to(device)
-        print("🎯 Using enhanced FocalLoss with cancer class weighting")
+    # Choose loss function based on model type
+    if use_focal_loss:
+        criterion = FocalLoss(alpha=1, gamma=2).to(device)
     else:
         criterion = torch.nn.CrossEntropyLoss().to(device)
-        print("📊 Using standard CrossEntropyLoss")
     
-    # Optimized optimizer with weight decay and learning rate scheduling
-    optimizer = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
-    
-    # Learning rate scheduler for better convergence
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer, T_0=10, T_mult=2, eta_min=lr*0.01
-    )
+    # Use different optimizers based on model type
+    if isinstance(net, (ResNetBased, EfficientNetBased)):
+        # For ResNet/EfficientNet architectures, use single learning rate since no pretrained weights
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    else:
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     
     net.train()
     running_loss = 0.0
-    best_loss = float('inf')
-    patience_counter = 0
-    
-    for epoch in range(epochs):
-        epoch_loss = 0.0
-        correct_predictions = 0
-        total_predictions = 0
-        
+    for _ in range(epochs):
         for batch in trainloader:
             images = batch["image"].to(device)
             labels = batch["label"].to(device)
-            
             optimizer.zero_grad()
-            
-            # Forward pass
-            outputs = net(images)
-            loss = criterion(outputs, labels)
-            
-            # Backward pass with gradient clipping
+            loss = criterion(net(images), labels)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
-            
             optimizer.step()
-            
-            epoch_loss += loss.item()
-            
-            # Track accuracy
-            _, predicted = torch.max(outputs.data, 1)
-            total_predictions += labels.size(0)
-            correct_predictions += (predicted == labels).sum().item()
-        
-        # Update learning rate
-        scheduler.step()
-        
-        avg_epoch_loss = epoch_loss / len(trainloader)
-        epoch_accuracy = correct_predictions / total_predictions
-        
-        # Early stopping based on loss improvement
-        if avg_epoch_loss < best_loss:
-            best_loss = avg_epoch_loss
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            
-        if epoch % 5 == 0:  # Print every 5 epochs
-            print(f"Epoch {epoch+1}/{epochs}: Loss = {avg_epoch_loss:.4f}, Accuracy = {epoch_accuracy:.4f}")
-        
-        # Early stopping if no improvement for 10 epochs
-        if patience_counter >= 10:
-            print(f"🛑 Early stopping at epoch {epoch+1}")
-            break
-            
-        running_loss += avg_epoch_loss
-    
-    return running_loss / epochs
-
-
-def interpret_cancer_likelihood(predictions, class_names=None):
-    """Interpret model predictions as cancer likelihood with medical context"""
-    if class_names is None:
-        class_names = [
-            "Melanocytic nevi", "Melanoma", "Benign keratosis", 
-            "Basal cell carcinoma", "Actinic keratoses", 
-            "Vascular lesions", "Dermatofibroma"
-        ]
-    
-    # Define cancer risk levels
-    cancer_classes = {
-        "Melanoma": {"risk": "HIGH", "malignancy": "Malignant", "urgency": "Immediate"},
-        "Basal cell carcinoma": {"risk": "HIGH", "malignancy": "Malignant", "urgency": "High"},
-        "Actinic keratoses": {"risk": "MEDIUM", "malignancy": "Pre-malignant", "urgency": "Medium"},
-        "Melanocytic nevi": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"},
-        "Benign keratosis": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"},
-        "Vascular lesions": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"},
-        "Dermatofibroma": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"}
-    }
-    
-    # Convert logits to probabilities
-    probabilities = F.softmax(predictions, dim=1)
-    
-    results = []
-    for i, prob in enumerate(probabilities[0]):  # Assuming batch size 1
-        class_name = class_names[i]
-        cancer_info = cancer_classes.get(class_name, {"risk": "UNKNOWN", "malignancy": "Unknown", "urgency": "Unknown"})
-        
-        results.append({
-            "class_name": class_name,
-            "probability": prob.item(),
-            "confidence_percentage": round(prob.item() * 100, 1),
-            "cancer_risk": cancer_info["risk"],
-            "malignancy_type": cancer_info["malignancy"],
-            "clinical_urgency": cancer_info["urgency"],
-            "relative_likelihood": prob.item()
-        })
-    
-    # Sort by probability (highest first)
-    results.sort(key=lambda x: x["probability"], reverse=True)
-    
-    return results
+            running_loss += loss.item()
+    avg_trainloss = running_loss / len(trainloader)
+    return avg_trainloss
 
 
 def test(net, testloader, device):
@@ -513,6 +572,12 @@ def get_model(model_type: str, num_classes: int):
     """Get the specified model type for skin lesion classification"""
     if model_type == "enhanced_cnn":
         return EnhancedCNN(num_classes)
+    elif model_type == "improved_cnn":
+        return ImprovedCNN(num_classes)
+    elif model_type == "hybrid_cnn_svm":
+        return HybridCNNSVM(num_classes)
+    elif model_type == "deep_cnn":
+        return DeepCNN(num_classes)
     elif model_type == "resnet":
         return ResNetBased(num_classes)
     elif model_type == "efficientnet":
@@ -522,31 +587,42 @@ def get_model(model_type: str, num_classes: int):
 
 
 def get_model_config(model_type: str):
-    """Get optimized configuration for cancer diagnosis accuracy"""
+    """Get configuration for different model types"""
     configs = {
         "enhanced_cnn": {
-            "use_diagnostic_loss": True,  # Use specialized cancer diagnosis loss
-            "use_focal_loss": False,
-            "lr": 0.001,  # Optimized learning rate for cancer diagnosis
-            "description": "Optimized CNN with diagnostic loss for maximum cancer detection accuracy"
+            "use_focal_loss": True,
+            "lr": 0.0005,  # Lower LR for better convergence with class balancing
+            "description": "Enhanced CNN with attention and aggressive class balancing"
+        },
+        "improved_cnn": {
+            "use_focal_loss": True,
+            "lr": 0.001,  # Higher LR for improved CNN with batch norm
+            "description": "Improved CNN with batch normalization, no dropout, more layers"
+        },
+        "hybrid_cnn_svm": {
+            "use_focal_loss": False,  # SVM handles class imbalance
+            "lr": 0.001,
+            "description": "Hybrid CNN-SVM: CNN for features, SVM for classification"
+        },
+        "deep_cnn": {
+            "use_focal_loss": True,
+            "lr": 0.0005,  # Lower LR for deep network
+            "description": "Deep CNN with residual connections and batch normalization"
         },
         "resnet": {
-            "use_diagnostic_loss": True,  # Prioritize cancer detection
-            "use_focal_loss": False,
-            "lr": 0.0005,  # Lower LR for transfer learning
-            "description": "ResNet18 with diagnostic loss for cancer-specific training"
+            "use_focal_loss": True,  # Enable focal loss for better minority class handling
+            "lr": 0.0001,  # Lower LR for better convergence
+            "description": "ResNet18 architecture with aggressive class balancing"
         },
         "efficientnet": {
-            "use_diagnostic_loss": True,  # Focus on cancer diagnosis
-            "use_focal_loss": False,
-            "lr": 0.0005,  # Optimized for EfficientNet
-            "description": "EfficientNet-B0 with diagnostic loss for efficient cancer detection"
+            "use_focal_loss": True,
+            "lr": 0.0001,  # Lower LR for better convergence
+            "description": "EfficientNet-B0 architecture with aggressive class balancing"
         },
         "default": {
-            "use_diagnostic_loss": True,  # Default to cancer-optimized training
-            "use_focal_loss": False,
-            "lr": 0.001,
-            "description": "Cancer-optimized CNN with diagnostic loss"
+            "use_focal_loss": True,  # Enable focal loss by default
+            "lr": 0.01,
+            "description": "Original simple CNN"
         }
     }
     return configs.get(model_type, configs["default"])
@@ -1212,3 +1288,212 @@ def save_detailed_results(eval_results, confidence_analysis, class_distribution,
     except Exception as e:
         print(f"⚠️  Error saving detailed results: {e}")
         return None
+
+
+class EarlyStopping:
+    """Early stopping utility to prevent overfitting"""
+    
+    def __init__(self, patience=5, min_delta=0.001, restore_best_weights=True):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.restore_best_weights = restore_best_weights
+        self.best_loss = None
+        self.counter = 0
+        self.best_weights = None
+        
+    def __call__(self, val_loss, model):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+            self.save_checkpoint(model)
+        elif val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+            self.save_checkpoint(model)
+        else:
+            self.counter += 1
+            
+        if self.counter >= self.patience:
+            if self.restore_best_weights:
+                model.load_state_dict(self.best_weights)
+            return True
+        return False
+    
+    def save_checkpoint(self, model):
+        """Save the best model weights"""
+        self.best_weights = model.state_dict().copy()
+
+
+def train_with_early_stopping(net, trainloader, epochs, lr, device, use_focal_loss=True, 
+                             optimizer_type='adam', patience=5):
+    """Train with early stopping and different optimizers"""
+    net.to(device)
+    
+    # Collect all data first for class balancing
+    all_images = []
+    all_labels = []
+    
+    for batch in trainloader:
+        all_images.append(batch["image"])
+        all_labels.append(batch["label"])
+    
+    all_images = torch.cat(all_images, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
+    
+    # Calculate class distribution
+    class_counts = [0] * 7
+    for label in all_labels:
+        class_counts[label] += 1
+    
+    print(f"📊 Original class distribution:")
+    class_names = ["Melanocytic nevi", "Melanoma", "Benign keratosis", 
+                   "Basal cell carcinoma", "Actinic keratoses", 
+                   "Vascular lesions", "Dermatofibroma"]
+    
+    for i, (name, count) in enumerate(zip(class_names, class_counts)):
+        percentage = (count / len(all_labels)) * 100
+        print(f"  {name}: {count} samples ({percentage:.1f}%)")
+    
+    # Simple oversampling: repeat minority classes to balance dataset
+    oversampled_images = []
+    oversampled_labels = []
+    
+    # Find target count (use median instead of max to avoid extreme oversampling)
+    non_zero_counts = [count for count in class_counts if count > 0]
+    target_count = int(np.median(non_zero_counts)) if non_zero_counts else 100
+    
+    print(f"📈 Target samples per class: {target_count}")
+    
+    for class_id in range(7):
+        class_mask = all_labels == class_id
+        class_images = all_images[class_mask]
+        class_labels = all_labels[class_mask]
+        
+        if len(class_images) == 0:
+            continue  # Skip classes with no samples
+        
+        # Add original samples
+        oversampled_images.append(class_images)
+        oversampled_labels.append(class_labels)
+        
+        # Simple oversampling: repeat samples to reach target count
+        if len(class_images) < target_count:
+            # Calculate how many times to repeat
+            repeat_times = target_count // len(class_images)
+            remainder = target_count % len(class_images)
+            
+            # Repeat the entire class
+            for _ in range(repeat_times):
+                oversampled_images.append(class_images)
+                oversampled_labels.append(class_labels)
+            
+            # Add remainder samples (random selection)
+            if remainder > 0:
+                remainder_indices = torch.randperm(len(class_images))[:remainder]
+                oversampled_images.append(class_images[remainder_indices])
+                oversampled_labels.append(class_labels[remainder_indices])
+    
+    # Combine all oversampled data
+    if oversampled_images:
+        balanced_images = torch.cat(oversampled_images, dim=0)
+        balanced_labels = torch.cat(oversampled_labels, dim=0)
+        
+        # Create balanced dataset
+        balanced_dataset = torch.utils.data.TensorDataset(balanced_images, balanced_labels)
+        balanced_loader = torch.utils.data.DataLoader(balanced_dataset, batch_size=32, shuffle=True)
+        
+        print(f"📊 Balanced dataset size: {len(balanced_images)} samples")
+    else:
+        # Fallback to original data if no samples found
+        print("⚠️  No samples found, using original data")
+        balanced_loader = trainloader
+    
+    # Use focal loss for better handling of hard examples
+    if use_focal_loss:
+        criterion = FocalLoss(alpha=1, gamma=2).to(device)
+    else:
+        criterion = torch.nn.CrossEntropyLoss().to(device)
+    
+    # Different optimizers
+    if optimizer_type.lower() == 'adamw':
+        optimizer = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
+    elif optimizer_type.lower() == 'sgd':
+        optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
+    elif optimizer_type.lower() == 'rmsprop':
+        optimizer = torch.optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-4)
+    else:  # Default to Adam
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=1e-4)
+    
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2)
+    early_stopping = EarlyStopping(patience=patience)
+    
+    net.train()
+    running_loss = 0.0
+    best_loss = float('inf')
+    
+    for epoch in range(epochs):
+        epoch_loss = 0.0
+        correct_predictions = 0
+        total_predictions = 0
+        
+        for batch in balanced_loader:
+            if isinstance(batch, (list, tuple)) and len(batch) == 2:
+                # TensorDataset format
+                images, labels = batch
+            else:
+                # Original dataloader format
+                images = batch["image"]
+                labels = batch["label"]
+            
+            images = images.to(device)
+            labels = labels.to(device)
+            optimizer.zero_grad()
+            
+            outputs = net(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
+            
+            optimizer.step()
+            epoch_loss += loss.item()
+            
+            # Track accuracy
+            _, predicted = torch.max(outputs.data, 1)
+            total_predictions += labels.size(0)
+            correct_predictions += (predicted == labels).sum().item()
+        
+        avg_epoch_loss = epoch_loss / len(balanced_loader)
+        epoch_accuracy = correct_predictions / total_predictions
+        
+        print(f"Epoch {epoch+1}/{epochs}: Loss = {avg_epoch_loss:.4f}, Accuracy = {epoch_accuracy:.4f}")
+        
+        # Update learning rate
+        scheduler.step(avg_epoch_loss)
+        
+        # Early stopping check
+        if early_stopping(avg_epoch_loss, net):
+            print(f"🛑 Early stopping at epoch {epoch+1}")
+            break
+        
+        running_loss += avg_epoch_loss
+        best_loss = min(best_loss, avg_epoch_loss)
+    
+    print(f"✅ Training completed. Best loss: {best_loss:.4f}")
+    return running_loss / (epoch + 1)
+
+
+def train_hybrid_model(net, trainloader, epochs, lr, device):
+    """Train hybrid CNN-SVM model"""
+    net.to(device)
+    
+    # First train CNN feature extractor
+    print("🔧 Training CNN feature extractor...")
+    train_with_early_stopping(net, trainloader, epochs//2, lr, device, 
+                             use_focal_loss=False, optimizer_type='adam')
+    
+    # Then train SVM on extracted features
+    print("🔧 Training SVM classifier...")
+    net.train_svm(trainloader, device)
+    
+    return 0.0  # Return dummy loss since SVM training is separate

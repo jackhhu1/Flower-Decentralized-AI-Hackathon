@@ -48,125 +48,73 @@ class AttentionBlock(nn.Module):
 
 
 class EnhancedCNN(nn.Module):
-    """Optimized CNN with advanced attention mechanisms for maximum diagnostic accuracy"""
+    """Enhanced CNN with attention mechanisms optimized for skin lesion classification"""
 
     def __init__(self, num_classes: int):
         super(EnhancedCNN, self).__init__()
         
-        # Enhanced feature extraction with residual connections
-        # First block - capture low-level features (edges, textures)
-        self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.attention1 = AttentionBlock(64, reduction=8)
-        self.conv1_res = nn.Conv2d(3, 64, 1)  # Residual connection
+        # First convolutional block with attention
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.attention1 = AttentionBlock(32)
         self.pool1 = nn.MaxPool2d(2, 2)
         
-        # Second block - capture mid-level features (patterns, shapes)
-        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(128)
-        self.attention2 = AttentionBlock(128, reduction=8)
-        self.conv2_res = nn.Conv2d(64, 128, 1)  # Residual connection
+        # Second convolutional block with attention
+        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.attention2 = AttentionBlock(64)
         self.pool2 = nn.MaxPool2d(2, 2)
         
-        # Third block - capture high-level features (lesion characteristics)
-        self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
-        self.bn3 = nn.BatchNorm2d(256)
-        self.attention3 = AttentionBlock(256, reduction=8)
-        self.conv3_res = nn.Conv2d(128, 256, 1)  # Residual connection
+        # Third convolutional block with attention
+        self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.attention3 = AttentionBlock(128)
         self.pool3 = nn.MaxPool2d(2, 2)
         
-        # Fourth block - capture very high-level features (diagnostic patterns)
-        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
-        self.bn4 = nn.BatchNorm2d(512)
-        self.attention4 = AttentionBlock(512, reduction=8)
-        self.conv4_res = nn.Conv2d(256, 512, 1)  # Residual connection
+        # Fourth convolutional block with attention
+        self.conv4 = nn.Conv2d(128, 256, 3, padding=1)
+        self.bn4 = nn.BatchNorm2d(256)
+        self.attention4 = AttentionBlock(256)
         self.pool4 = nn.MaxPool2d(2, 2)
         
-        # Fifth block - final feature extraction
-        self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
-        self.bn5 = nn.BatchNorm2d(512)
-        self.attention5 = AttentionBlock(512, reduction=8)
-        
-        # Global feature aggregation
+        # Global average pooling
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.global_max_pool = nn.AdaptiveMaxPool2d(1)
         
-        # Enhanced classifier with multiple pathways
-        self.dropout1 = nn.Dropout(0.3)
-        self.dropout2 = nn.Dropout(0.5)
-        self.dropout3 = nn.Dropout(0.3)
-        
-        # Multi-scale feature fusion
-        self.fc1 = nn.Linear(1024, 1024)  # Combined avg + max pooling
-        self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 256)
-        self.fc4 = nn.Linear(256, num_classes)
-        
-        # Initialize weights for better convergence
-        self._initialize_weights()
-
-    def _initialize_weights(self):
-        """Initialize weights using Xavier/He initialization for better convergence"""
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight)
-                nn.init.constant_(m.bias, 0)
+        # Classifier with dropout
+        self.dropout = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(256, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, num_classes)
 
     def forward(self, x):
-        # Store input for residual connection
-        identity1 = self.conv1_res(x)
-        
-        # First block with residual connection
+        # First block
         x = F.relu(self.bn1(self.conv1(x)))
         x = self.attention1(x)
-        x = x + identity1  # Residual connection
         x = self.pool1(x)
         
-        # Second block with residual connection
-        identity2 = self.conv2_res(x)
+        # Second block
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.attention2(x)
-        x = x + identity2  # Residual connection
         x = self.pool2(x)
         
-        # Third block with residual connection
-        identity3 = self.conv3_res(x)
+        # Third block
         x = F.relu(self.bn3(self.conv3(x)))
         x = self.attention3(x)
-        x = x + identity3  # Residual connection
         x = self.pool3(x)
         
-        # Fourth block with residual connection
-        identity4 = self.conv4_res(x)
+        # Fourth block
         x = F.relu(self.bn4(self.conv4(x)))
         x = self.attention4(x)
-        x = x + identity4  # Residual connection
         x = self.pool4(x)
         
-        # Fifth block
-        x = F.relu(self.bn5(self.conv5(x)))
-        x = self.attention5(x)
-        
-        # Multi-scale feature aggregation
-        avg_pool = self.global_avg_pool(x)
-        max_pool = self.global_max_pool(x)
-        
-        # Combine average and max pooling for richer features
-        x = torch.cat([avg_pool, max_pool], dim=1)
+        # Global average pooling
+        x = self.global_avg_pool(x)
         x = x.view(x.size(0), -1)
         
-        # Enhanced classifier with multiple dropout layers
-        x = self.dropout1(F.relu(self.fc1(x)))
-        x = self.dropout2(F.relu(self.fc2(x)))
-        x = self.dropout3(F.relu(self.fc3(x)))
-        x = self.fc4(x)  # Final classification layer
+        # Classifier
+        x = self.dropout(F.relu(self.fc1(x)))
+        x = self.dropout(F.relu(self.fc2(x)))
+        x = self.fc3(x)
         
         return x
 
@@ -238,44 +186,18 @@ class Net(nn.Module):
 
 
 class FocalLoss(nn.Module):
-    """Enhanced Focal Loss optimized for cancer diagnosis with class-specific weighting"""
+    """Focal Loss for addressing class imbalance in skin lesion classification"""
     
-    def __init__(self, alpha=1, gamma=3, reduction='mean', class_weights=None):
+    def __init__(self, alpha=1, gamma=2, reduction='mean'):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
         
-        # Cancer-specific class weights (higher weight for malignant classes)
-        if class_weights is None:
-            # DermMNIST class weights: prioritize malignant classes
-            self.class_weights = torch.tensor([
-                1.0,  # Melanocytic nevi (benign)
-                3.0,  # Melanoma (malignant) - HIGH PRIORITY
-                2.0,  # Benign keratosis (benign)
-                2.5,  # Basal cell carcinoma (malignant) - HIGH PRIORITY
-                2.0,  # Actinic keratoses (pre-malignant) - MEDIUM PRIORITY
-                1.0,  # Vascular lesions (benign)
-                1.0   # Dermatofibroma (benign)
-            ])
-        else:
-            self.class_weights = class_weights
-            
     def forward(self, inputs, targets):
-        # Calculate cross entropy loss
         ce_loss = F.cross_entropy(inputs, targets, reduction='none')
-        
-        # Calculate probabilities
         pt = torch.exp(-ce_loss)
-        
-        # Apply class-specific weights
-        if self.class_weights.device != inputs.device:
-            self.class_weights = self.class_weights.to(inputs.device)
-        
-        class_weight = self.class_weights[targets]
-        
-        # Enhanced focal loss with class weighting
-        focal_loss = class_weight * self.alpha * (1 - pt) ** self.gamma * ce_loss
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * ce_loss
         
         if self.reduction == 'mean':
             return focal_loss.mean()
@@ -285,42 +207,26 @@ class FocalLoss(nn.Module):
             return focal_loss
 
 
-class DiagnosticLoss(nn.Module):
-    """Specialized loss function for cancer diagnosis with confidence weighting"""
-    
-    def __init__(self, cancer_classes=[1, 3, 4], confidence_weight=2.0):
-        super(DiagnosticLoss, self).__init__()
-        self.cancer_classes = cancer_classes  # Melanoma, BCC, Actinic keratoses
-        self.confidence_weight = confidence_weight
-        self.focal_loss = FocalLoss(alpha=1, gamma=3)
-        
-    def forward(self, inputs, targets):
-        # Standard focal loss
-        focal_loss = self.focal_loss(inputs, targets)
-        
-        # Calculate confidence penalty for cancer classes
-        probabilities = F.softmax(inputs, dim=1)
-        max_probs, predicted = torch.max(probabilities, dim=1)
-        
-        # Penalize low confidence predictions for cancer classes
-        cancer_mask = torch.isin(targets, torch.tensor(self.cancer_classes).to(targets.device))
-        confidence_penalty = torch.where(
-            cancer_mask & (max_probs < 0.8),
-            (0.8 - max_probs) * self.confidence_weight,
-            torch.zeros_like(max_probs)
-        ).mean()
-        
-        return focal_loss + confidence_penalty
-
-
 # Enhanced data augmentation for skin lesion images
 def get_skin_lesion_transforms(is_training=True):
-    """No augmentation - preserve original medical image characteristics"""
-    # No augmentation - preserve original medical image characteristics
-    return Compose([
-        ToTensor(),
-        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    """Get appropriate transforms for skin lesion classification"""
+    if is_training:
+        # Simple, robust augmentation
+        return Compose([
+            RandomResizedCrop(28, scale=(0.8, 1.0)),
+            RandomHorizontalFlip(p=0.5),
+            RandomVerticalFlip(p=0.3),
+            RandomRotation(degrees=15),
+            ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+            RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+    else:
+        return Compose([
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
 
 # Original transforms for backward compatibility
@@ -345,130 +251,36 @@ def load_data(data_path: str):
     return trainloader, testloader
 
 
-def train(net, trainloader, epochs, lr, device, use_focal_loss=False, use_diagnostic_loss=False):
-    """Enhanced training function optimized for cancer diagnosis accuracy."""
+def train(net, trainloader, epochs, lr, device, use_focal_loss=False):
+    """Train the model on the training set."""
     net.to(device)  # move model to GPU if available
     
-    # Choose optimized loss function for cancer diagnosis
-    if use_diagnostic_loss:
-        criterion = DiagnosticLoss(cancer_classes=[1, 3, 4], confidence_weight=2.0).to(device)
-        print("🔬 Using DiagnosticLoss for cancer-specific training")
-    elif use_focal_loss:
-        criterion = FocalLoss(alpha=1, gamma=3, class_weights=None).to(device)
-        print("🎯 Using enhanced FocalLoss with cancer class weighting")
+    # Choose loss function based on model type
+    if use_focal_loss:
+        criterion = FocalLoss(alpha=1, gamma=2).to(device)
     else:
         criterion = torch.nn.CrossEntropyLoss().to(device)
-        print("📊 Using standard CrossEntropyLoss")
     
-    # Optimized optimizer with weight decay and learning rate scheduling
-    optimizer = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
-    
-    # Learning rate scheduler for better convergence
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer, T_0=10, T_mult=2, eta_min=lr*0.01
-    )
+    # Use different optimizers based on model type
+    if isinstance(net, (ResNetBased, EfficientNetBased)):
+        # For ResNet/EfficientNet architectures, use single learning rate since no pretrained weights
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    else:
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     
     net.train()
     running_loss = 0.0
-    best_loss = float('inf')
-    patience_counter = 0
-    
-    for epoch in range(epochs):
-        epoch_loss = 0.0
-        correct_predictions = 0
-        total_predictions = 0
-        
+    for _ in range(epochs):
         for batch in trainloader:
             images = batch["image"].to(device)
             labels = batch["label"].to(device)
-            
             optimizer.zero_grad()
-            
-            # Forward pass
-            outputs = net(images)
-            loss = criterion(outputs, labels)
-            
-            # Backward pass with gradient clipping
+            loss = criterion(net(images), labels)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
-            
             optimizer.step()
-            
-            epoch_loss += loss.item()
-            
-            # Track accuracy
-            _, predicted = torch.max(outputs.data, 1)
-            total_predictions += labels.size(0)
-            correct_predictions += (predicted == labels).sum().item()
-        
-        # Update learning rate
-        scheduler.step()
-        
-        avg_epoch_loss = epoch_loss / len(trainloader)
-        epoch_accuracy = correct_predictions / total_predictions
-        
-        # Early stopping based on loss improvement
-        if avg_epoch_loss < best_loss:
-            best_loss = avg_epoch_loss
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            
-        if epoch % 5 == 0:  # Print every 5 epochs
-            print(f"Epoch {epoch+1}/{epochs}: Loss = {avg_epoch_loss:.4f}, Accuracy = {epoch_accuracy:.4f}")
-        
-        # Early stopping if no improvement for 10 epochs
-        if patience_counter >= 10:
-            print(f"🛑 Early stopping at epoch {epoch+1}")
-            break
-            
-        running_loss += avg_epoch_loss
-    
-    return running_loss / epochs
-
-
-def interpret_cancer_likelihood(predictions, class_names=None):
-    """Interpret model predictions as cancer likelihood with medical context"""
-    if class_names is None:
-        class_names = [
-            "Melanocytic nevi", "Melanoma", "Benign keratosis", 
-            "Basal cell carcinoma", "Actinic keratoses", 
-            "Vascular lesions", "Dermatofibroma"
-        ]
-    
-    # Define cancer risk levels
-    cancer_classes = {
-        "Melanoma": {"risk": "HIGH", "malignancy": "Malignant", "urgency": "Immediate"},
-        "Basal cell carcinoma": {"risk": "HIGH", "malignancy": "Malignant", "urgency": "High"},
-        "Actinic keratoses": {"risk": "MEDIUM", "malignancy": "Pre-malignant", "urgency": "Medium"},
-        "Melanocytic nevi": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"},
-        "Benign keratosis": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"},
-        "Vascular lesions": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"},
-        "Dermatofibroma": {"risk": "LOW", "malignancy": "Benign", "urgency": "Low"}
-    }
-    
-    # Convert logits to probabilities
-    probabilities = F.softmax(predictions, dim=1)
-    
-    results = []
-    for i, prob in enumerate(probabilities[0]):  # Assuming batch size 1
-        class_name = class_names[i]
-        cancer_info = cancer_classes.get(class_name, {"risk": "UNKNOWN", "malignancy": "Unknown", "urgency": "Unknown"})
-        
-        results.append({
-            "class_name": class_name,
-            "probability": prob.item(),
-            "confidence_percentage": round(prob.item() * 100, 1),
-            "cancer_risk": cancer_info["risk"],
-            "malignancy_type": cancer_info["malignancy"],
-            "clinical_urgency": cancer_info["urgency"],
-            "relative_likelihood": prob.item()
-        })
-    
-    # Sort by probability (highest first)
-    results.sort(key=lambda x: x["probability"], reverse=True)
-    
-    return results
+            running_loss += loss.item()
+    avg_trainloss = running_loss / len(trainloader)
+    return avg_trainloss
 
 
 def test(net, testloader, device):
@@ -522,31 +334,27 @@ def get_model(model_type: str, num_classes: int):
 
 
 def get_model_config(model_type: str):
-    """Get optimized configuration for cancer diagnosis accuracy"""
+    """Get configuration for different model types"""
     configs = {
         "enhanced_cnn": {
-            "use_diagnostic_loss": True,  # Use specialized cancer diagnosis loss
-            "use_focal_loss": False,
-            "lr": 0.001,  # Optimized learning rate for cancer diagnosis
-            "description": "Optimized CNN with diagnostic loss for maximum cancer detection accuracy"
+            "use_focal_loss": True,
+            "lr": 0.0005,  # Lower LR for better convergence with class balancing
+            "description": "Enhanced CNN with attention and aggressive class balancing"
         },
         "resnet": {
-            "use_diagnostic_loss": True,  # Prioritize cancer detection
-            "use_focal_loss": False,
-            "lr": 0.0005,  # Lower LR for transfer learning
-            "description": "ResNet18 with diagnostic loss for cancer-specific training"
+            "use_focal_loss": True,  # Enable focal loss for better minority class handling
+            "lr": 0.0001,  # Lower LR for better convergence
+            "description": "ResNet18 architecture with aggressive class balancing"
         },
         "efficientnet": {
-            "use_diagnostic_loss": True,  # Focus on cancer diagnosis
-            "use_focal_loss": False,
-            "lr": 0.0005,  # Optimized for EfficientNet
-            "description": "EfficientNet-B0 with diagnostic loss for efficient cancer detection"
+            "use_focal_loss": True,
+            "lr": 0.0001,  # Lower LR for better convergence
+            "description": "EfficientNet-B0 architecture with aggressive class balancing"
         },
         "default": {
-            "use_diagnostic_loss": True,  # Default to cancer-optimized training
-            "use_focal_loss": False,
-            "lr": 0.001,
-            "description": "Cancer-optimized CNN with diagnostic loss"
+            "use_focal_loss": True,  # Enable focal loss by default
+            "lr": 0.01,
+            "description": "Original simple CNN"
         }
     }
     return configs.get(model_type, configs["default"])
