@@ -30,8 +30,8 @@ DermaCheck combines three components:
 │                                                                 │
 │  Hospital A ──┐                                                 │
 │  Hospital B ──┤                                                 │
-│  Hospital C ──┤──▶ Flower ResearchGrid ──▶ FedAvg Server ──▶  │
-│  Hospital D ──┤         (remote)           (aggregation)       │
+│  Hospital C ──┤──▶ Flower ResearchGrid ──▶ FedAvg Server ──▶    │
+│  Hospital D ──┤         (remote)           (aggregation)        │
 │  Hospital E ──┤                                    │            │
 │  Hospital F ──┤                                    ▼            │
 │  Hospital G ──┤                             Trained Model       │
@@ -43,10 +43,10 @@ DermaCheck combines three components:
 │                      LOCAL INFERENCE                            │
 │                                                                 │
 │   ML Service (Flask :5000)                                      │
-│   POST /analyze ◀──── Expo Mobile App                          │
-│        │               (Camera → 28×28 base64)                 │
+│   POST /analyze ◀──── Expo Mobile App                           │
+│        │               (Camera → 28×28 base64)                  │
 │        ▼                                                        │
-│   EnhancedCNN ──▶ 7-class softmax ──▶ Cancer risk score        │
+│   EnhancedCNN ──▶ 7-class softmax ──▶ Cancer risk score         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
