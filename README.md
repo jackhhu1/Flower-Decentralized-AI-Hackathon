@@ -1,4 +1,4 @@
-# DermaCheck — Decentralized AI for Skin Cancer Detection
+# DermaCheck - Decentralized AI for Skin Cancer Detection
 
 A federated learning system for skin lesion classification across distributed hospital nodes, built for the [Flower Decentralized AI Hackathon (Stanford 2025)](https://flower.ai/blog/2025-09-24-hackathon-sf/). Patient data never leaves the hospital - only model weights are shared. Read more here [DermaCheck](https://flower.ai/blog/2025-10-22-decentralized-hackathon-sf-winners/)
 
