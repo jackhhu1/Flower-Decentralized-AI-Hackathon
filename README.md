@@ -1,6 +1,6 @@
 # DermaCheck — Decentralized AI for Skin Cancer Detection
 
-A federated learning system for skin lesion classification across distributed hospital nodes, built for the [Flower Decentralized AI Hackathon (Stanford 2025)](https://flower.ai/blog/2025-09-24-hackathon-sf/). Patient data never leaves the hospital — only model weights are shared.
+A federated learning system for skin lesion classification across distributed hospital nodes, built for the [Flower Decentralized AI Hackathon (Stanford 2025)](https://flower.ai/blog/2025-09-24-hackathon-sf/). Patient data never leaves the hospital - only model weights are shared. Read more here [DermaCheck](https://flower.ai/blog/2025-10-22-decentralized-hackathon-sf-winners/)
 
 ---
 
@@ -80,10 +80,10 @@ Alternative architectures available: `resnet` (ResNet18 transfer learning) and `
 
 ### Loss Functions
 
-**FocalLoss** — handles class imbalance by down-weighting easy examples:
+**FocalLoss** - handles class imbalance by down-weighting easy examples:
 - γ = 3, per-class weights `[1.0, 3.0, 2.0, 2.5, 2.0, 1.0, 1.0]` (higher weight on malignant classes)
 
-**DiagnosticLoss** — adds a confidence penalty for cancer classes:
+**DiagnosticLoss** - adds a confidence penalty for cancer classes:
 - Penalises predictions with <80% confidence for high-risk classes
 
 ### Training Configuration
