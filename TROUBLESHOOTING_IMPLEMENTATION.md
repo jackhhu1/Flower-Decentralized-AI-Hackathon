@@ -149,26 +149,6 @@ flwr run --stream --run-config="model-type='enhanced_cnn' dataset='dermamnist' n
 - **Support**: Check if all classes have sufficient samples
 - **Distribution**: Monitor if model learns all classes equally
 
-## 🔧 **Troubleshooting Steps**
-
-### **If Accuracy Still Low (<75%)**
-1. **Increase training rounds**: `num-server-rounds=15`
-2. **Increase local epochs**: `local-epochs=5`
-3. **Adjust learning rate**: Try `lr=0.0001` or `lr=0.001`
-4. **Try different model**: Switch to `resnet` or `efficientnet`
-
-### **If Specific Classes Perform Poorly**
-1. **Check confusion matrix**: Identify which classes are confused
-2. **Increase class weights**: Modify class balancing parameters
-3. **Use focal loss**: Set `use-focal-loss=true`
-4. **Data augmentation**: Increase augmentation intensity
-
-### **If Training is Unstable**
-1. **Reduce learning rate**: Try `lr=0.0001`
-2. **Increase batch size**: Modify in `load_data()` function
-3. **Add gradient clipping**: Implement in training function
-4. **Use different optimizer**: Try SGD with momentum
-
 ## 📈 **Expected Results**
 
 With these improvements, you should see:
